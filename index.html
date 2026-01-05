@@ -13,14 +13,38 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
+            margin: 0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #video-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.85) 0%, rgba(118, 75, 162, 0.85) 100%);
+            z-index: -1;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
         .header {
@@ -204,6 +228,29 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.3s;
+        }
+
+        .results-table th.sortable:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6539a0 100%);
+        }
+
+        .results-table th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+            font-size: 0.9em;
+        }
+
+        .results-table th.sorted-asc::after {
+            content: ' ↑';
+            opacity: 1;
+        }
+
+        .results-table th.sorted-desc::after {
+            content: ' ↓';
+            opacity: 1;
         }
 
         .results-table td {
@@ -360,6 +407,12 @@
     </style>
 </head>
 <body>
+    <!-- Video Background -->
+    <video id="video-background" autoplay muted loop playsinline>
+        <source src="assets/3572-172488159_medium.mp4" type="video/mp4">
+    </video>
+    <div class="video-overlay"></div>
+
     <div class="container">
         <div class="header">
             <h1>🚗 CarFinder</h1>
@@ -629,14 +682,14 @@
             // Display car listings in table view
             const tableDiv = document.getElementById('resultsTable');
             tableDiv.innerHTML = `
-                <table class="results-table">
+                <table class="results-table" id="sortableTable">
                     <thead>
                         <tr>
                             <th>Source</th>
-                            <th>Year</th>
+                            <th class="sortable" data-column="year" data-type="number">Year</th>
                             <th>Make/Model</th>
-                            <th>Price</th>
-                            <th>Mileage</th>
+                            <th class="sortable" data-column="price" data-type="number">Price</th>
+                            <th class="sortable" data-column="mileage" data-type="number">Mileage</th>
                             <th>Location</th>
                             <th>Description</th>
                             <th>Link</th>
@@ -646,10 +699,10 @@
                         ${data.listings.map(car => `
                             <tr>
                                 <td><span class="table-source">${escapeHtml(car.source)}</span></td>
-                                <td class="table-year">${escapeHtml(car.parsedYear)}</td>
+                                <td class="table-year" data-value="${car.parsedYear}">${escapeHtml(car.parsedYear)}</td>
                                 <td>${escapeHtml(car.make)} ${escapeHtml(car.model)}</td>
-                                <td class="table-price">${escapeHtml(car.parsedPrice)}</td>
-                                <td>${escapeHtml(car.parsedMileage)}</td>
+                                <td class="table-price" data-value="${extractNumber(car.parsedPrice)}">${escapeHtml(car.parsedPrice)}</td>
+                                <td data-value="${extractNumber(car.parsedMileage)}">${escapeHtml(car.parsedMileage)}</td>
                                 <td>${escapeHtml(car.parsedLocation)}</td>
                                 <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(car.cleanDescription)}">
                                     ${escapeHtml(car.cleanDescription || 'N/A')}
@@ -663,7 +716,83 @@
                 </table>
             `;
             
+            // Add sorting functionality
+            setupTableSorting();
+            
             resultsDiv.style.display = 'block';
+        }
+
+        function extractNumber(str) {
+            if (!str) return 0;
+            const match = str.match(/[\d,]+/);
+            if (!match) return 0;
+            return parseFloat(match[0].replace(/,/g, ''));
+        }
+
+        function setupTableSorting() {
+            const table = document.getElementById('sortableTable');
+            if (!table) return;
+
+            const headers = table.querySelectorAll('th.sortable');
+            let currentSort = { column: null, direction: 'asc' };
+
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    const type = header.dataset.type;
+
+                    // Toggle sort direction
+                    if (currentSort.column === column) {
+                        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        currentSort.direction = 'asc';
+                        currentSort.column = column;
+                    }
+
+                    // Remove sorted classes from all headers
+                    headers.forEach(h => {
+                        h.classList.remove('sorted-asc', 'sorted-desc');
+                    });
+
+                    // Add sorted class to current header
+                    header.classList.add(`sorted-${currentSort.direction}`);
+
+                    // Sort the table
+                    sortTable(table, column, type, currentSort.direction);
+                });
+            });
+        }
+
+        function sortTable(table, column, type, direction) {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Map column names to cell indices
+            const columnIndex = {
+                'year': 1,
+                'price': 3,
+                'mileage': 4
+            }[column];
+
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].dataset.value;
+                const bValue = b.cells[columnIndex].dataset.value;
+
+                let comparison = 0;
+                if (type === 'number') {
+                    const aNum = parseFloat(aValue) || 0;
+                    const bNum = parseFloat(bValue) || 0;
+                    comparison = aNum - bNum;
+                } else {
+                    comparison = aValue.localeCompare(bValue);
+                }
+
+                return direction === 'asc' ? comparison : -comparison;
+            });
+
+            // Clear and re-append sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
         }
 
         function escapeHtml(text) {
