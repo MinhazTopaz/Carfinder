@@ -19,6 +19,21 @@ class CarListing:
     source: str
     description: Optional[str] = None
     
+    def to_dict(self):
+        """Convert to dictionary for API responses."""
+        return {
+            'title': self.title,
+            'price': self.price,
+            'year': self.year,
+            'make': self.make,
+            'model': self.model,
+            'mileage': self.mileage,
+            'location': self.location,
+            'url': self.url,
+            'source': self.source,
+            'description': self.description
+        }
+    
     def __str__(self):
         """String representation of the car listing."""
         parts = [
