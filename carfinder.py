@@ -18,6 +18,7 @@ Examples:
 
 import argparse
 import sys
+import traceback
 from aggregator import CarFinderAggregator
 
 
@@ -68,7 +69,6 @@ Supported Sources:
         sys.exit(0)
     except Exception as e:
         print(f"\nError: {e}")
-        import traceback
         traceback.print_exc()
         sys.exit(1)
 

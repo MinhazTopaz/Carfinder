@@ -1,6 +1,7 @@
 """Scraper for Kijiji Autos."""
 
-from typing import List
+import re
+from typing import List, Optional
 from urllib.parse import quote
 from base_scraper import BaseScraper
 from models import CarListing
@@ -69,7 +70,7 @@ class KijijiScraper(BaseScraper):
         print(f"Found {len(listings)} listings on Kijiji")
         return listings
     
-    def _parse_listing(self, item) -> CarListing:
+    def _parse_listing(self, item) -> Optional[CarListing]:
         """
         Parse a single listing item.
         
@@ -128,7 +129,6 @@ class KijijiScraper(BaseScraper):
     
     def _extract_year(self, text: str) -> str:
         """Extract year from text (simple pattern matching)."""
-        import re
         # Look for 4-digit year (1990-2099)
         match = re.search(r'\b(19\d{2}|20\d{2})\b', text)
         return match.group(1) if match else None

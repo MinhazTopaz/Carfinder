@@ -1,6 +1,7 @@
 """Scraper for Facebook Marketplace."""
 
-from typing import List
+import re
+from typing import List, Optional
 from urllib.parse import quote
 from base_scraper import BaseScraper
 from models import CarListing
@@ -76,7 +77,7 @@ class FacebookMarketplaceScraper(BaseScraper):
         
         return listings
     
-    def _parse_listing(self, item, make: str, model: str) -> CarListing:
+    def _parse_listing(self, item, make: str, model: str) -> Optional[CarListing]:
         """
         Parse a single listing item.
         
@@ -116,6 +117,5 @@ class FacebookMarketplaceScraper(BaseScraper):
     
     def _extract_year(self, text: str) -> str:
         """Extract year from text."""
-        import re
         match = re.search(r'\b(19\d{2}|20\d{2})\b', text)
         return match.group(1) if match else None

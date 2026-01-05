@@ -1,7 +1,7 @@
 """Base scraper class with common functionality."""
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -39,7 +39,7 @@ class BaseScraper(ABC):
         """Return the name of the source website."""
         pass
     
-    def fetch_page(self, url: str) -> BeautifulSoup:
+    def fetch_page(self, url: str) -> Optional[BeautifulSoup]:
         """
         Fetch and parse a webpage.
         
